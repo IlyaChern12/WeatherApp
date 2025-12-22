@@ -1,0 +1,118 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: #f2f4f8;
+  color: #222;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #4a6cf7;
+  color: #fff;
+}
+
+.container {
+  padding: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+button {
+  padding: 8px 14px;
+  border: none;
+  cursor: pointer;
+  background: #4a6cf7;
+  color: white;
+  border-radius: 4px;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.city-form {
+  margin-bottom: 20px;
+}
+
+.city-form input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 4px;
+}
+
+.suggestions {
+  list-style: none;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+.suggestions li {
+  padding: 6px;
+  cursor: pointer;
+}
+
+.suggestions li:hover {
+  background: #eee;
+}
+
+.cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.city-card {
+  background: #fff;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.weather {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.weather-day {
+  background: #fff;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.loader {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.error {
+  background: #ffdede;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.error-text {
+  color: red;
+  font-size: 14px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Адаптивность */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
