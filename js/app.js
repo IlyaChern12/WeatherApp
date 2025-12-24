@@ -1,166 +1,250 @@
-const loader = document.getElementById("loader");
-const errorBlock = document.getElementById("error");
-const cityForm = document.getElementById("cityForm");
-const cityInput = document.getElementById("cityInput");
-const cityError = document.getElementById("cityError");
-const suggestions = document.getElementById("suggestions");
-const citiesList = document.getElementById("citiesList");
-const weatherBlock = document.getElementById("weather");
-const refreshBtn = document.getElementById("refreshBtn");
-const addCityBtn = document.getElementById("addCityBtn");
+// api для поиска городов
+const GEO_API = 'https://geocoding-api.open-meteo.com/v1/search';
+const WEATHER_API = 'https://api.open-meteo.com/v1/forecast';
 
-// состояния
-let cities = JSON.parse(localStorage.getItem("cities")) || [];
-let currentCity = null;
+// ссылки на элементы страницы
+const forecastEl = document.getElementById('forecast');
+const statusEl = document.getElementById('status');
+const refreshBtn = document.getElementById('refresh');
 
-// хелперы
-function showLoader(show) {
-  loader.classList.toggle("hidden", !show);
+const cityForm = document.getElementById('city-form');
+const cityInput = document.getElementById('city-input');
+const suggestionsEl = document.getElementById('suggestions');
+const errorEl = document.getElementById('error');
+
+// блок с сообщением, когда нет городов
+const noCitiesEl = document.querySelector('.no-cities');
+
+// состояние приложения
+let state = JSON.parse(localStorage.getItem('weather-state')) || {
+  cities: []
+};
+
+// сохраняем состояние в localStorage
+function saveState() {
+  localStorage.setItem('weather-state', JSON.stringify(state));
 }
 
-function showError(message) {
-  errorBlock.textContent = message;
-  errorBlock.classList.remove("hidden");
+// получаем данные о погоде по координатам
+async function fetchWeather(lat, lon) {
+  const url =
+    `${WEATHER_API}?latitude=${lat}&longitude=${lon}` +
+    `&daily=temperature_2m_min,temperature_2m_max,precipitation_sum,wind_speed_10m_max` +
+    `&timezone=auto`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Ошибка загрузки погоды');
+  return res.json();
 }
 
-function clearError() {
-  errorBlock.classList.add("hidden");
+// ищем города по названию
+async function searchCity(query) {
+  const res = await fetch(`${GEO_API}?name=${query}&count=5&language=ru`);
+  if (!res.ok) throw new Error('Ошибка поиска города');
+  return res.json();
 }
 
-function saveCities() {
-  localStorage.setItem("cities", JSON.stringify(cities));
+// обновляем текст статуса
+function setStatus(text) {
+  statusEl.textContent = text;
 }
 
-// api
-async function getCitySuggestions(query) {
-  const res = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=5&language=ru`
-  );
-  const data = await res.json();
-  return data.results || [];
+// форматируем дату в дд.мм.гггг
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
 }
 
-async function getWeather(lat, lon) {
-  const res = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
-  );
-  return await res.json();
+// загружаем и отображаем погоду для одного города
+async function loadCityWeather(city, index) {
+  const cityCard = document.createElement('div');
+  cityCard.className = 'city-card';
+
+  cityCard.innerHTML = `
+    <div class="city-header">
+      <div class="city-name">${city.name}</div>
+      <button class="delete-btn">✖</button>
+    </div>
+    <div class="days">Загрузка...</div>
+  `;
+
+  forecastEl.appendChild(cityCard);
+
+  // удаление города
+  cityCard.querySelector('.delete-btn').onclick = () => {
+    state.cities.splice(index, 1);
+    saveState();
+    renderAllCities();
+  };
+
+  try {
+    const data = await fetchWeather(city.lat, city.lon);
+    const daysEl = cityCard.querySelector('.days');
+    daysEl.innerHTML = '';
+
+    // определяем сколько дней показывать
+    const daysToShow = city.name === 'Текущее местоположение' ? 3 : 7;
+
+    for (let i = 0; i < daysToShow; i++) {
+      const dayDate = data.daily.time[i];
+      const isToday = i === 0 ? ' (Сегодня)' : '';
+
+      const day = document.createElement('div');
+      day.className = 'day-card';
+
+      day.innerHTML = `
+        <div class="date">${formatDate(dayDate)}${isToday}</div>
+        <div class="temp">
+          ${data.daily.temperature_2m_min[i]}° /
+          ${data.daily.temperature_2m_max[i]}°
+        </div>
+        <div class="details">
+          <div>Осадки: ${data.daily.precipitation_sum[i]} мм</div>
+          <div>Ветер: ${data.daily.wind_speed_10m_max[i]} м/с</div>
+        </div>
+      `;
+
+      daysEl.appendChild(day);
+    }
+  } catch (e) {
+    cityCard.querySelector('.days').textContent = 'Ошибка загрузки погоды';
+  }
 }
 
-// отрисовка
-function renderCities() {
-  citiesList.innerHTML = "";
+// отображаем все города и их прогноз
+function renderAllCities() {
+  forecastEl.innerHTML = '';
 
-  cities.forEach(city => {
-    const div = document.createElement("div");
-    div.className = "city-card";
-    div.textContent = city.name;
-    div.onclick = () => selectCity(city);
-    citiesList.appendChild(div);
+  if (state.cities.length === 0) {
+    noCitiesEl.style.display = 'block';
+    return;
+  } else {
+    noCitiesEl.style.display = 'none';
+  }
+
+  state.cities.forEach((city, index) => {
+    loadCityWeather(city, index);
   });
 }
 
-function renderWeather(data) {
-  weatherBlock.innerHTML = "";
+// автодополнение при вводе города
+cityInput.addEventListener('input', async () => {
+  suggestionsEl.innerHTML = '';
+  errorEl.textContent = '';
 
-  for (let i = 0; i < 3; i++) {
-    const day = document.createElement("div");
-    day.className = "weather-day";
-    day.innerHTML = `
-      <h3>${data.daily.time[i]}</h3>
-      <p>Макс: ${data.daily.temperature_2m_max[i]}°C</p>
-      <p>Мин: ${data.daily.temperature_2m_min[i]}°C</p>
-    `;
-    weatherBlock.appendChild(day);
-  }
-}
-
-// подгрузка погоды
-async function loadWeather(city) {
-  showLoader(true);
-  clearError();
-
-  try {
-    const data = await getWeather(city.lat, city.lon);
-    renderWeather(data);
-  } catch {
-    showError("Ошибка при загрузке погоды");
-  } finally {
-    showLoader(false);
-  }
-}
-
-function selectCity(city) {
-  currentCity = city;
-  loadWeather(city);
-}
-
-// события
-refreshBtn.onclick = () => {
-  if (currentCity) loadWeather(currentCity);
-};
-
-addCityBtn.onclick = () => {
-  if (!currentCity) {
-    cityError.textContent = "Выберите город из списка";
+  if (cityInput.value.length < 2) {
+    suggestionsEl.style.display = 'none';
     return;
   }
 
-  cities.push(currentCity);
-  saveCities();
-  renderCities();
-  cityForm.classList.add("hidden");
-  cityError.textContent = "";
-};
-
-cityInput.oninput = async () => {
-  const query = cityInput.value.trim();
-  suggestions.innerHTML = "";
-  cityError.textContent = "";
-
-  if (!query) return;
-
-  const results = await getCitySuggestions(query);
-
-  results.forEach(city => {
-    const li = document.createElement("li");
-    li.textContent = `${city.name}, ${city.country}`;
-    li.onclick = () => {
-      currentCity = {
-        name: city.name,
-        lat: city.latitude,
-        lon: city.longitude
-      };
-      cityInput.value = city.name;
-      suggestions.innerHTML = "";
-    };
-    suggestions.appendChild(li);
-  });
-};
-
-// инитка
-function init() {
-  if (cities.length > 0) {
-    renderCities();
-    selectCity(cities[0]);
-  } else {
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const city = {
-          name: "Текущее местоположение",
-          lat: position.coords.latitude,
-          lon: position.coords.longitude
-        };
-        cities.push(city);
-        saveCities();
-        renderCities();
-        selectCity(city);
-      },
-      () => {
-        cityForm.classList.remove("hidden");
-      }
-    );
+  const data = await searchCity(cityInput.value);
+  if (!data.results || data.results.length === 0) {
+    suggestionsEl.style.display = 'none';
+    return;
   }
+
+  data.results.forEach(city => {
+    const div = document.createElement('div');
+    div.textContent = city.name;
+    div.onclick = () => {
+      cityInput.value = city.name;
+      cityInput.dataset.lat = city.latitude;
+      cityInput.dataset.lon = city.longitude;
+      suggestionsEl.innerHTML = '';
+      suggestionsEl.style.display = 'none';
+      errorEl.textContent = '';
+    };
+    suggestionsEl.appendChild(div);
+  });
+
+  suggestionsEl.style.display = 'block';
+});
+
+// добавление города через форму
+cityForm.addEventListener('submit', e => {
+  e.preventDefault();
+
+  const lat = cityInput.dataset.lat;
+  const lon = cityInput.dataset.lon;
+
+  if (!lat || !lon) {
+    errorEl.textContent = 'Введите корректный город или выберите город из списка предложенных';
+    return;
+  }
+
+  const city = {
+    name: cityInput.value,
+    lat,
+    lon
+  };
+
+  state.cities.push(city);
+  saveState();
+  renderAllCities();
+
+  cityInput.value = '';
+  cityInput.dataset.lat = '';
+  cityInput.dataset.lon = '';
+  errorEl.textContent = '';
+});
+
+// очищаем сообщение об ошибке при вводе
+cityInput.addEventListener('input', () => {
+  errorEl.textContent = '';
+});
+
+// обновление всех городов
+refreshBtn.addEventListener('click', () => {
+  renderAllCities();
+});
+
+// попытка получить геопозицию при первом запуске
+if (state.cities.length === 0 && navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      const currentCity = { name: 'Текущее местоположение', lat, lon };
+      state.cities.push(currentCity);
+      saveState();
+
+      renderAllCities();
+    },
+    (error) => {
+      noCitiesEl.style.display = 'block';
+    }
+  );
+} else if (state.cities.length === 0) {
+  noCitiesEl.style.display = 'block';
 }
 
-init();
+// сразу показываем сообщение, если нет городов
+if (state.cities.length === 0) {
+  noCitiesEl.style.display = 'block';
+}
+
+// повторная попытка получить геопозицию при первом запуске
+if (navigator.geolocation && state.cities.length === 0) {
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      const currentCity = { name: 'Текущее местоположение', lat, lon };
+      state.cities.push(currentCity);
+      saveState();
+
+      noCitiesEl.style.display = 'none';
+      renderAllCities();
+    },
+    (error) => {
+      noCitiesEl.style.display = 'block';
+    }
+  );
+} else {
+  renderAllCities();
+}

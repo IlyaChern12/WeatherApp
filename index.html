@@ -3,30 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Прогноз погоды</title>
+  <title>WeatherApp - Прогноз погоды</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
 <header class="header">
-  <h1>Прогноз погоды</h1>
-  <button id="refreshBtn">Обновить</button>
+  <div class="logo">WeatherApp</div>
+  <button id="refresh">Обновить</button>
 </header>
 
 <main class="container">
 
-  <div id="error" class="error hidden"></div>
-  <div id="loader" class="loader hidden">Загрузка...</div>
+  <div id="status" class="status"></div>
 
-  <section id="cityForm" class="city-form hidden">
-    <input type="text" id="cityInput" placeholder="Введите город" autocomplete="off" />
-    <ul id="suggestions" class="suggestions"></ul>
-    <button id="addCityBtn">Добавить город</button>
-    <p id="cityError" class="error-text"></p>
-  </section>
-
-  <section id="citiesList" class="cities"></section>
-  <section id="weather" class="weather"></section>
+  <section class="cities">
+  <div class="cities-header">
+    <h2 class="cities-title">Сохранённые города</h2>
+    <div id="error" class="error"></div>
+    <form id="city-form">
+      <input id="city-input" type="text" placeholder="Введите город" autocomplete="off">
+      <button type="submit">Добавить</button>
+      <div id="suggestions" class="suggestions"></div>
+    </form>
+  </div>
+  <div class="no-cities">Добавьте город, чтобы увидеть погоду в нём!</div>
+  <div id="forecast"></div>
+</section>
 
 </main>
 
