@@ -73,7 +73,7 @@ async function loadCityWeather(city, index) {
     const daysEl = cityCard.querySelector('.days');
     daysEl.innerHTML = '';
 
-    const daysToShow = city.name === 'Текущее местоположение' ? 3 : 7;
+    const daysToShow = 7;
 
     for (let i = 0; i < daysToShow; i++) {
       const dayDate = data.daily.time[i];
@@ -156,7 +156,7 @@ cityForm.addEventListener('submit', e => {
   const lon = cityInput.dataset.lon;
 
   if (!lat || !lon) {
-    errorEl.textContent = 'Введите корректный город или выберите город из списка предложенных';
+    errorEl.textContent = 'Введите корректный город или выберите из списка предложенных';
     return;
   }
 

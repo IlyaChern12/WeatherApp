@@ -194,6 +194,19 @@ button {
 
 .cities-header h2 {
   margin: 0;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 800px) {
+  .cities-header h2 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cities-header h2 {
+    font-size: 0.9rem;
+  }
 }
 
 #city-form {
@@ -278,4 +291,39 @@ button {
 
 #city-form button[type="submit"]:hover {
   background-color: #2980b9;
+}
+
+@media (max-width: 480px) {
+  .cities-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #city-form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  #city-form #city-input {
+    width: 100%;
+    font-size: 14px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+  }
+
+  #city-form button[type="submit"] {
+    width: 100%;
+    margin-top: 6px;
+    font-size: 14px;
+    padding: 8px 0;
+  }
+
+  .error {
+    width: 100%;
+    padding-left: 6px;
+    margin-top: 8px;
+    margin-bottom: 6px;
+  }
 }
